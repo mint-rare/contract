@@ -1,11 +1,6 @@
 pragma solidity ^0.5.6;
 pragma experimental ABIEncoderV2;
 
-/**
- * import 이슈
- * https://stackoverflow.com/questions/67321111/file-import-callback-not-supported
- */
-
 import '../node_modules/openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol';
 import '../node_modules/@klaytn/contracts/token/KIP17/IKIP17.sol';
 import '../node_modules/@klaytn/contracts/math/SafeMath.sol';
