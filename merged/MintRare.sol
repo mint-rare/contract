@@ -1200,7 +1200,7 @@ contract MintRare is ReentrancyGuard {
   uint256 private _totalSaleCount = 0;
 
   struct SaleTokenInfo {
-    address owner;
+    address payable owner;
     address tokenAddress;
     uint256 tokenId;
     uint256 price;
@@ -1208,13 +1208,12 @@ contract MintRare is ReentrancyGuard {
 
   SaleTokenInfo[] saleTokenList;
 
-  struct SaleTokenInfoMap {
-    address payable seller;
-    uint256 price;
+  struct SaleTokenIndexMap {
     uint256 tokenListIndex;
+    bool isAvailable;
   }
 
-  mapping(address => mapping(uint256 => SaleTokenInfoMap)) saleTokenInfoMap;
+  mapping(address => mapping(uint256 => SaleTokenIndexMap)) saleTokenIndexMap;
 
   function tokenSaleRegistration(
     address tokenAddress,
@@ -1224,7 +1223,7 @@ contract MintRare is ReentrancyGuard {
     require(IKIP17(tokenAddress).ownerOf(tokenId) == msg.sender, 'caller is not owner');
 
     uint256 tokenIndex = saleTokenList.push(SaleTokenInfo(msg.sender, tokenAddress, tokenId, price)) - 1;
-    saleTokenInfoMap[tokenAddress][tokenId] = SaleTokenInfoMap(msg.sender, price, tokenIndex);
+    saleTokenIndexMap[tokenAddress][tokenId] = SaleTokenIndexMap(tokenIndex, true);
 
     _totalSaleCount = _totalSaleCount.add(1);
   }
@@ -1246,30 +1245,23 @@ contract MintRare is ReentrancyGuard {
     return msg.sender;
   }
 
-  function getSaleTokenInfoMap(address tokenAddress, uint256 tokenId)
-    public
-    view
-    returns (
-      address,
-      uint256,
-      uint256
-    )
-  {
+  function getSaleTokenInfoMap(address tokenAddress, uint256 tokenId) public view returns (uint256, bool) {
     return (
-      saleTokenInfoMap[tokenAddress][tokenId].seller,
-      saleTokenInfoMap[tokenAddress][tokenId].price,
-      saleTokenInfoMap[tokenAddress][tokenId].tokenListIndex
+      saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex,
+      saleTokenIndexMap[tokenAddress][tokenId].isAvailable
     );
   }
 
   function _removeFromSaleTokenList(uint256 index) private {
     require(index < saleTokenList.length);
 
-    delete saleTokenInfoMap[saleTokenList[index].tokenAddress][saleTokenList[index].tokenId];
+    SaleTokenInfo memory saleTokenInfo = saleTokenList[index];
+
+    delete saleTokenIndexMap[saleTokenInfo.tokenAddress][saleTokenInfo.tokenId];
 
     if (saleTokenList.length > 1) {
       saleTokenList[index] = saleTokenList[saleTokenList.length.sub(1)];
-      saleTokenInfoMap[saleTokenList[index].tokenAddress][saleTokenList[index].tokenId].tokenListIndex = index;
+      saleTokenIndexMap[saleTokenInfo.tokenAddress][saleTokenInfo.tokenId].tokenListIndex = index;
     }
 
     saleTokenList.pop();
@@ -1277,9 +1269,12 @@ contract MintRare is ReentrancyGuard {
 
   function buyToken(address tokenAddress, uint256 tokenId) public payable nonReentrant {
     // address payable _market = address(uint160(address(this)));
-    address payable _seller = saleTokenInfoMap[tokenAddress][tokenId].seller;
+    require(saleTokenIndexMap[tokenAddress][tokenId].isAvailable == true);
 
-    uint256 _price = saleTokenInfoMap[tokenAddress][tokenId].price.mul(10**18);
+    SaleTokenInfo memory saleTokenInfo = saleTokenList[saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex];
+    address payable _seller = saleTokenInfo.owner;
+
+    uint256 _price = saleTokenInfo.price.mul(10**18);
     uint256 _fee = _price.mul(3).div(100);
 
     require(IKIP17(tokenAddress).getApproved(tokenId) == address(this));
@@ -1290,7 +1285,7 @@ contract MintRare is ReentrancyGuard {
 
     IKIP17(tokenAddress).transferFrom(_seller, msg.sender, tokenId);
 
-    _removeFromSaleTokenList(saleTokenInfoMap[tokenAddress][tokenId].tokenListIndex);
+    _removeFromSaleTokenList(saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex);
 
     _totalSaleCount = _totalSaleCount.sub(1);
   }
