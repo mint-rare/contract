@@ -1,5 +1,5 @@
-var kip7 = artifacts.require('KIP7');
+var mintRare = artifacts.require('MintRare')
 
-module.exports = function(deployer) {
-  deployer.deploy(kip7)
-};
+module.exports = function (deployer) {
+  deployer.deploy(mintRare)
+}

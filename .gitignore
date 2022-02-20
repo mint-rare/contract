@@ -3,3 +3,7 @@ privateKeys.js
 package-lock.json
 test/local-klaytn-deploy
 build
+
+.env
+
+.vscode
