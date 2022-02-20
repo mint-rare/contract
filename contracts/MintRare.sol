@@ -2,11 +2,13 @@ pragma solidity ^0.5.6;
 pragma experimental ABIEncoderV2;
 
 import '../node_modules/openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol';
-import '../node_modules/@klaytn/contracts/token/KIP17/KIP17.sol';
 import '../node_modules/@klaytn/contracts/math/SafeMath.sol';
 import '../node_modules/@klaytn/contracts/utils/Address.sol';
 
-contract Market is KIP17, ReentrancyGuard {
+import '../node_modules/@klaytn/contracts/token/KIP7/KIP7Token.sol';
+import '../node_modules/@klaytn/contracts/token/KIP17/IKIP17.sol';
+
+contract MintRare is ReentrancyGuard {
   using SafeMath for uint256;
   using Address for address;
 
