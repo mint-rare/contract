@@ -1274,7 +1274,7 @@ contract MintRare is KIP7Token('MintRareToken', 'MRT', 18, 100000000000000000000
     address payable _seller = saleTokenInfo.owner;
 
     uint256 _price = saleTokenInfo.price.mul(10**18);
-    uint256 _fee = _price.mul(3).div(100);
+    uint256 _fee = _price.div(100);
 
     require(IKIP17(tokenAddress).getApproved(tokenId) == address(this));
     require(msg.value == _price);
@@ -1287,7 +1287,7 @@ contract MintRare is KIP7Token('MintRareToken', 'MRT', 18, 100000000000000000000
 
     _totalSaleCount = _totalSaleCount.sub(1);
 
-    uint256 _reward = _price.div(100);
+    uint256 _reward = _price.mul(3).div(100);
 
     _rewardToTraders(_seller, msg.sender, _reward);
   }
@@ -1296,7 +1296,7 @@ contract MintRare is KIP7Token('MintRareToken', 'MRT', 18, 100000000000000000000
     address _seller,
     address _buyer,
     uint256 _reward
-  ) private nonReentrant {
+  ) private {
     _mint(_seller, _reward);
     _mint(_buyer, _reward);
   }
