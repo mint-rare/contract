@@ -2,7 +2,7 @@
   "name": "mint-rare-contract",
   "version": "0.0.1",
   "scripts": {
-    "build": "truffle compile && sol-merger './contracts/MintRare.sol' ./merged",
+    "build": "truffle compile && sol-merger './contracts/*.sol !./contracts/Migrations.sol' ./merged",
     "test": "concurrently --success first --kill-others 'yarn run:ganache' 'yarn test:ganache'",
     "run:ganache": "ganache-cli -l 80000000 -q -k constantinople",
     "run:klaytn": "./test/prepare.sh",
