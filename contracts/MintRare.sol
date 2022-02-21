@@ -8,7 +8,7 @@ import '../node_modules/@klaytn/contracts/utils/Address.sol';
 import '../node_modules/@klaytn/contracts/token/KIP7/KIP7Token.sol';
 import '../node_modules/@klaytn/contracts/token/KIP17/IKIP17.sol';
 
-contract MintRare is ReentrancyGuard {
+contract MintRare is KIP7Token('MintRareToken', 'MRT', 18, 100000000000000000000000000000000), ReentrancyGuard {
   using SafeMath for uint256;
   using Address for address;
 
@@ -83,7 +83,6 @@ contract MintRare is ReentrancyGuard {
   }
 
   function buyToken(address tokenAddress, uint256 tokenId) public payable nonReentrant {
-    // address payable _market = address(uint160(address(this)));
     require(saleTokenIndexMap[tokenAddress][tokenId].isAvailable == true);
 
     SaleTokenInfo memory saleTokenInfo = saleTokenList[saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex];
@@ -96,12 +95,24 @@ contract MintRare is ReentrancyGuard {
     require(msg.value == _price);
 
     _seller.transfer(_price.sub(_fee));
-    // _market.transfer(_fee);
 
     IKIP17(tokenAddress).transferFrom(_seller, msg.sender, tokenId);
 
     _removeFromSaleTokenList(saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex);
 
     _totalSaleCount = _totalSaleCount.sub(1);
+
+    uint256 _reward = _price.div(100);
+
+    _rewardToTraders(_seller, msg.sender, _reward);
+  }
+
+  function _rewardToTraders(
+    address _seller,
+    address _buyer,
+    uint256 _reward
+  ) private nonReentrant {
+    _mint(_seller, _reward);
+    _mint(_buyer, _reward);
   }
 }
