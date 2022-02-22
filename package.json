@@ -2,7 +2,7 @@
   "name": "mint-rare-contract",
   "version": "0.0.1",
   "scripts": {
-    "build": "truffle compile && sol-merger './contracts/MintRare.sol' ./merged",
+    "build": "truffle compile && sol-merger './contracts/*.sol' ./merged && npm run prettier:fix",
     "test": "concurrently --success first --kill-others 'yarn run:ganache' 'yarn test:ganache'",
     "run:ganache": "ganache-cli -l 80000000 -q -k constantinople",
     "run:klaytn": "./test/prepare.sh",
@@ -17,7 +17,8 @@
     "deploy:klaytn": "truffle deploy --network klaytn",
     "deploy:baobab": "truffle deploy --network baobab",
     "deploy:cypress": "truffle deploy --network cypress",
-    "prettier": "prettier '**/*.{js,json,yaml,yml}' --check"
+    "prettier": "prettier '**/*.{sol,js,json,yaml,yml}' --check",
+    "prettier:fix": "prettier '**/*.{sol,js,json,yaml,yml}' --write"
   },
   "dependencies": {
     "@klaytn/contracts": "^0.9.0",
@@ -30,7 +31,6 @@
   "devDependencies": {
     "concurrently": "^5.3.0",
     "ganache": "^7.0.2",
-    "ganache-cli": "^6.12.2",
     "husky": "^4.3.8",
     "lint-staged": "^10.5.4",
     "openzeppelin-test-helpers": "^0.3.2",

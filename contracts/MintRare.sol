@@ -2,18 +2,20 @@ pragma solidity ^0.5.6;
 pragma experimental ABIEncoderV2;
 
 import '../node_modules/openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol';
-import '../node_modules/@klaytn/contracts/token/KIP17/IKIP17.sol';
 import '../node_modules/@klaytn/contracts/math/SafeMath.sol';
 import '../node_modules/@klaytn/contracts/utils/Address.sol';
 
-contract Market is IKIP17, ReentrancyGuard {
+import '../node_modules/@klaytn/contracts/token/KIP7/KIP7Token.sol';
+import '../node_modules/@klaytn/contracts/token/KIP17/IKIP17.sol';
+
+contract MintRare is KIP7Token('MintRareToken', 'MRT', 18, 100000000000000000000000000000000), ReentrancyGuard {
   using SafeMath for uint256;
   using Address for address;
 
   uint256 private _totalSaleCount = 0;
 
   struct SaleTokenInfo {
-    address owner;
+    address payable owner;
     address tokenAddress;
     uint256 tokenId;
     uint256 price;
@@ -21,13 +23,12 @@ contract Market is IKIP17, ReentrancyGuard {
 
   SaleTokenInfo[] saleTokenList;
 
-  struct SaleTokenInfoMap {
-    address payable seller;
-    uint256 price;
+  struct SaleTokenIndexMap {
     uint256 tokenListIndex;
+    bool isAvailable;
   }
 
-  mapping(address => mapping(uint256 => SaleTokenInfoMap)) saleTokenInfoMap;
+  mapping(address => mapping(uint256 => SaleTokenIndexMap)) saleTokenIndexMap;
 
   function tokenSaleRegistration(
     address tokenAddress,
@@ -37,7 +38,7 @@ contract Market is IKIP17, ReentrancyGuard {
     require(IKIP17(tokenAddress).ownerOf(tokenId) == msg.sender, 'caller is not owner');
 
     uint256 tokenIndex = saleTokenList.push(SaleTokenInfo(msg.sender, tokenAddress, tokenId, price)) - 1;
-    saleTokenInfoMap[tokenAddress][tokenId] = SaleTokenInfoMap(msg.sender, price, tokenIndex);
+    saleTokenIndexMap[tokenAddress][tokenId] = SaleTokenIndexMap(tokenIndex, true);
 
     _totalSaleCount = _totalSaleCount.add(1);
   }
@@ -59,52 +60,59 @@ contract Market is IKIP17, ReentrancyGuard {
     return msg.sender;
   }
 
-  function getSaleTokenInfoMap(address tokenAddress, uint256 tokenId)
-    public
-    view
-    returns (
-      address,
-      uint256,
-      uint256
-    )
-  {
+  function getSaleTokenInfoMap(address tokenAddress, uint256 tokenId) public view returns (uint256, bool) {
     return (
-      saleTokenInfoMap[tokenAddress][tokenId].seller,
-      saleTokenInfoMap[tokenAddress][tokenId].price,
-      saleTokenInfoMap[tokenAddress][tokenId].tokenListIndex
+      saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex,
+      saleTokenIndexMap[tokenAddress][tokenId].isAvailable
     );
   }
 
   function _removeFromSaleTokenList(uint256 index) private {
     require(index < saleTokenList.length);
 
-    delete saleTokenInfoMap[saleTokenList[index].tokenAddress][saleTokenList[index].tokenId];
+    SaleTokenInfo memory saleTokenInfo = saleTokenList[index];
+
+    delete saleTokenIndexMap[saleTokenInfo.tokenAddress][saleTokenInfo.tokenId];
 
     if (saleTokenList.length > 1) {
       saleTokenList[index] = saleTokenList[saleTokenList.length.sub(1)];
-      saleTokenInfoMap[saleTokenList[index].tokenAddress][saleTokenList[index].tokenId].tokenListIndex = index;
+      saleTokenIndexMap[saleTokenInfo.tokenAddress][saleTokenInfo.tokenId].tokenListIndex = index;
     }
 
     saleTokenList.pop();
   }
 
   function buyToken(address tokenAddress, uint256 tokenId) public payable nonReentrant {
-    // address payable _market = address(uint160(address(this)));
-    address payable _seller = saleTokenInfoMap[tokenAddress][tokenId].seller;
+    require(saleTokenIndexMap[tokenAddress][tokenId].isAvailable == true);
 
-    uint256 _price = saleTokenInfoMap[tokenAddress][tokenId].price.mul(10**18);
-    uint256 _fee = _price.mul(3).div(100);
+    SaleTokenInfo memory saleTokenInfo = saleTokenList[saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex];
+    address payable _seller = saleTokenInfo.owner;
+
+    uint256 _price = saleTokenInfo.price.mul(10**18);
+    uint256 _fee = _price.div(100);
 
     require(IKIP17(tokenAddress).getApproved(tokenId) == address(this));
     require(msg.value == _price);
 
     _seller.transfer(_price.sub(_fee));
-    // _market.transfer(_fee);
 
     IKIP17(tokenAddress).transferFrom(_seller, msg.sender, tokenId);
 
-    _removeFromSaleTokenList(saleTokenInfoMap[tokenAddress][tokenId].tokenListIndex);
+    _removeFromSaleTokenList(saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex);
 
     _totalSaleCount = _totalSaleCount.sub(1);
+
+    uint256 _reward = _price.mul(3).div(100);
+
+    _rewardToTraders(_seller, msg.sender, _reward);
+  }
+
+  function _rewardToTraders(
+    address _seller,
+    address _buyer,
+    uint256 _reward
+  ) private {
+    _mint(_seller, _reward);
+    _mint(_buyer, _reward);
   }
 }
