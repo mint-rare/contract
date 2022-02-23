@@ -67,6 +67,11 @@ contract MintRare is KIP7Token('MintRareToken', 'MRT', 18, 100000000000000000000
     );
   }
 
+  function getSaleTokenInfo(address tokenAddress, uint256 tokenId) public view returns (SaleTokenInfo memory) {
+    require(saleTokenIndexMap[tokenAddress][tokenId].isAvailable == true);
+    return saleTokenList[saleTokenIndexMap[tokenAddress][tokenId].tokenListIndex];
+  }
+
   function _removeFromSaleTokenList(uint256 index) private {
     require(index < saleTokenList.length);
 
